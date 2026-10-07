@@ -8,6 +8,6 @@
   "scripts": {
     "start": "node server.js",
     "dev": "SEED_SAMPLE=1 node server.js",
-    "test": "node --test test/"
+    "test": "node --test \"test/*.test.js\""
   }
 }

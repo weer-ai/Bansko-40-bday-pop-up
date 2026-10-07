@@ -4,8 +4,6 @@ One-page invite with a shared skier map. Friends sign up, appear as skiers drift
 
 Ported from the `Landing.dc.html` prototype (visual and behavioural reference). This is a separate project from Terminal Taiwan.
 
-**Status:** written but not yet run. The first session's shell was unavailable, so `npm test` and a browser check are still to do.
-
 ## Run it
 
 ```sh
