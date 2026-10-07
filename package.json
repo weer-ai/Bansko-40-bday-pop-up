@@ -1,0 +1,13 @@
+{
+  "name": "bansko-40-bday-pop-up",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ting turns 40 — Bansko, February 2027. One-page invite with a shared skier map.",
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "SEED_SAMPLE=1 node server.js",
+    "test": "node --test test/"
+  }
+}
