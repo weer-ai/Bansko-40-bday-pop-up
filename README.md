@@ -51,4 +51,15 @@ After signing up, the visitor's browser remembers the entry and the page shows a
 
 ## Hosting
 
-The server is a plain Node HTTP server with a file store, so it runs on any Node host with a persistent disk (Fly.io, Railway, Render). On serverless/edge hosts, swap `lib/store.js` for a hosted DB; keep the `list/get/create/update/remove` interface. Terminal Taiwan's deploy setup was not available to reuse here.
+### Vercel
+
+`public/` is served as static files and `api/[...path].js` runs the same API code as a function. `vercel.json` sets the output directory.
+
+1. Import the repo in Vercel.
+2. Storage tab: add **Upstash Redis** and connect it to the project. This sets `KV_REST_API_URL` and `KV_REST_API_TOKEN` (or the `UPSTASH_*` equivalents), which the code reads.
+3. Settings, Environment Variables: add `ADMIN_TOKEN`.
+4. Redeploy. Without a database the API answers 503 with a message saying so.
+
+### Anywhere else
+
+The same code runs as a plain Node server (`npm start`) with a JSON file store, on any host with a persistent disk (Fly.io, Railway, Render). Set `DATA_FILE` to a path on that disk.

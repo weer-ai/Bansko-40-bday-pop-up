@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { Store } = require('./lib/store');
+const { makeStore } = require('./lib/store');
 const { validateSkier, hatFor } = require('./lib/validate');
 const { sampleSkiers } = require('./lib/sample');
 
@@ -26,16 +26,18 @@ const safeEq = (a, b) => {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 };
 
-function createServer(opts = {}) {
-  const store = opts.store || new Store(process.env.DATA_FILE || path.join(__dirname, 'data', 'skiers.json'));
+// Returns a (req, res) handler. Used by the local Node server and by the Vercel function.
+function createHandler(opts = {}) {
+  let store = opts.store || null;
+  let storeError = null;
+  if (!store) { try { store = makeStore(); } catch (e) { storeError = e; } }
   const adminToken = opts.adminToken !== undefined ? opts.adminToken : (process.env.ADMIN_TOKEN || '');
   const maxSkiers = opts.maxSkiers || 500;
 
-  if ((opts.seedSample ?? process.env.SEED_SAMPLE === '1') && store.list().length === 0) {
-    sampleSkiers().forEach((s, i) => store.skiers.push(Object.assign({}, s, { id: 'sample_' + i, editToken: crypto.randomBytes(12).toString('hex'), hidden: false, sample: true, createdAt: new Date().toISOString() })));
-  }
+  const wantSeed = opts.seedSample ?? process.env.SEED_SAMPLE === '1';
+  const ready = store && wantSeed && store.seedIfEmpty ? store.seedIfEmpty(sampleSkiers()) : Promise.resolve();
 
-  // Naive per-IP limiter for writes: 10 per 10 minutes.
+  // Naive per-instance limiter for writes: 10 per 10 minutes. On serverless each instance has its own count.
   const hits = new Map();
   const limited = (ip) => {
     const now = Date.now();
@@ -54,6 +56,13 @@ function createServer(opts = {}) {
   };
 
   const readJson = (req) => new Promise((resolve, reject) => {
+    // Vercel may already have parsed the body.
+    if (req.body !== undefined && req.body !== null) {
+      try {
+        if (Buffer.isBuffer(req.body)) return resolve(JSON.parse(req.body.toString('utf8') || '{}'));
+        return resolve(typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body);
+      } catch (e) { return reject(e); }
+    }
     let n = 0; const chunks = [];
     req.on('data', (c) => { n += c.length; if (n > 20000) { reject(new Error('too big')); req.destroy(); } else chunks.push(c); });
     req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch (e) { reject(e); } });
@@ -64,19 +73,22 @@ function createServer(opts = {}) {
     const h = req.headers.authorization || '';
     return !!adminToken && h.startsWith('Bearer ') && safeEq(h.slice(7), adminToken);
   };
+  const clientIp = (req) => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?';
 
   async function api(req, res, url) {
+    if (storeError) return send(res, 503, { error: storeError.message });
+    await ready;
     const parts = url.pathname.split('/').filter(Boolean); // ['api', ...]
-    const ip = req.socket.remoteAddress || '?';
+    const ip = clientIp(req);
     const m = req.method;
 
     if (parts[1] === 'skiers' && parts.length === 2) {
-      if (m === 'GET') return send(res, 200, store.list().filter((s) => !s.hidden).map(publicView), { 'Cache-Control': 'no-cache' });
+      if (m === 'GET') return send(res, 200, (await store.list()).filter((s) => !s.hidden).map(publicView), { 'Cache-Control': 'no-cache' });
       if (m === 'POST') {
         if (limited(ip)) return send(res, 429, { error: 'Easy there. Try again in a few minutes.' });
         let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
         if (body.website) return send(res, 200, { ok: true }); // honeypot: pretend success
-        if (store.list().length >= maxSkiers) return send(res, 503, { error: 'The slope is full.' });
+        if ((await store.list()).length >= maxSkiers) return send(res, 503, { error: 'The slope is full.' });
         const v = validateSkier(body);
         if (!v.ok) return send(res, 400, { error: v.error });
         const s = await store.create(Object.assign({}, v.value, { hat: hatFor(v.value.name) }));
@@ -85,7 +97,7 @@ function createServer(opts = {}) {
     }
 
     if (parts[1] === 'skiers' && parts.length === 3 && m === 'PUT') {
-      const s = store.get(parts[2]);
+      const s = await store.get(parts[2]);
       const tok = req.headers['x-edit-token'] || '';
       if (!s || !tok || !safeEq(tok, s.editToken)) return send(res, 403, { error: 'This edit link is not valid.' });
       let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
@@ -97,7 +109,7 @@ function createServer(opts = {}) {
 
     if (parts[1] === 'skiers' && parts.length === 3 && m === 'GET') {
       // Lets the page check that a stored edit token still points at a live entry.
-      const s = store.get(parts[2]);
+      const s = await store.get(parts[2]);
       const tok = req.headers['x-edit-token'] || '';
       if (!s || !tok || !safeEq(tok, s.editToken)) return send(res, 403, { error: 'Not found.' });
       return send(res, 200, { skier: Object.assign(publicView(s), { email: s.email || '' }) });
@@ -106,7 +118,7 @@ function createServer(opts = {}) {
     if (parts[1] === 'admin') {
       if (!isAdmin(req)) return send(res, 401, { error: 'Unauthorized.' });
       if (parts[2] === 'skiers' && parts.length === 3 && m === 'GET')
-        return send(res, 200, store.list().map((s) => Object.assign(publicView(s), { email: s.email || '', hidden: !!s.hidden, createdAt: s.createdAt, sample: !!s.sample })));
+        return send(res, 200, (await store.list()).map((s) => Object.assign(publicView(s), { email: s.email || '', hidden: !!s.hidden, createdAt: s.createdAt, sample: !!s.sample })));
       const id = parts[3];
       if (parts[2] === 'skiers' && id && parts[4] === 'hide' && m === 'POST') return send(res, (await store.update(id, { hidden: true })) ? 200 : 404, { ok: true });
       if (parts[2] === 'skiers' && id && parts[4] === 'unhide' && m === 'POST') return send(res, (await store.update(id, { hidden: false })) ? 200 : 404, { ok: true });
@@ -133,13 +145,20 @@ function createServer(opts = {}) {
     });
   }
 
-  const server = http.createServer((req, res) => {
+  const handler = (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname.startsWith('/api/')) {
       api(req, res, url).catch((e) => { console.error(e); if (!res.headersSent) send(res, 500, { error: 'Something broke.' }); });
     } else serveStatic(req, res, url);
-  });
-  server.store = store;
+  };
+  handler.store = store;
+  return handler;
+}
+
+function createServer(opts = {}) {
+  const handler = createHandler(opts);
+  const server = http.createServer(handler);
+  server.store = handler.store;
   return server;
 }
 
@@ -149,4 +168,4 @@ if (require.main === module) {
   createServer().listen(port, () => console.log('Bansko pop-up on http://localhost:' + port));
 }
 
-module.exports = { createServer };
+module.exports = { createServer, createHandler };
