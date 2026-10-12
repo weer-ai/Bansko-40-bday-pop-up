@@ -76,7 +76,7 @@ test('static files served, traversal blocked', async () => {
   try {
     const home = await fetch(base + '/');
     assert.strictEqual(home.status, 200);
-    assert.match(await home.text(), /Ting is/);
+    assert.match(await home.text(), /Winter/);
     assert.strictEqual((await fetch(base + '/..%2fserver.js')).status === 200, false);
     assert.strictEqual((await fetch(base + '/nope.txt')).status, 404);
   } finally { server.close(); }

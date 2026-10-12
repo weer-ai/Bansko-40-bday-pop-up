@@ -39,7 +39,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
 .hero-ctl .mono{font-size:12px;margin-right:6px}
 .hero-r{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:clamp(24px,4vw,72px);background:var(--ice);padding:88px var(--gutter) 120px}
 .hero-r h1{grid-column:1/-1;font-size:clamp(56px,7.6vw,148px);font-weight:500;letter-spacing:-.055em;line-height:.88}
-.sub{grid-column:1;margin-top:28px;font-size:clamp(22px,2.1vw,34px);letter-spacing:-.02em;line-height:1.15}
+.sub{grid-column:1;margin-top:28px;font-size:clamp(18px,1.55vw,26px);letter-spacing:-.015em;line-height:1.25}
 .side{grid-column:2;grid-row:2/4;margin-top:28px;position:relative;aspect-ratio:4/5;overflow:hidden;align-self:start}
 .details{grid-column:1;grid-row:4;display:flex;flex-direction:column;margin-top:40px}
 .details h2{margin-bottom:12px;font-size:clamp(26px,2.2vw,36px);font-weight:500;letter-spacing:-.03em}
@@ -206,6 +206,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
   .vcopy{position:static;margin-top:32px}
   .video{flex-direction:column;padding-bottom:140px}
   #wordmark{font-size:24px}
+  .menu{max-width:calc(100% - 24px)}
+  .menu-open{flex-wrap:wrap;justify-content:center}
+  .m-item{padding:0 12px;font-size:15px}
   .big-top span{font-size:22px}
 }
 @media (prefers-reduced-motion:reduce){.spin,.pop{animation:none}html{scroll-behavior:auto}}
