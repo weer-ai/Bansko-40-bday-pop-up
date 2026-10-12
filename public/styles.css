@@ -36,8 +36,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
 /* hero */
 .hero{display:grid;grid-template-columns:41% minmax(0,1fr);min-height:100vh}
 .hero-img{position:relative;min-height:100vh;overflow:hidden}
-.hero-ctl,.reel-ctl{position:absolute;right:24px;bottom:24px;display:flex;align-items:center;gap:8px;color:var(--cold)}
-.hero-ctl .mono,.reel-ctl .mono{font-size:12px;margin-right:6px}
+.hero-ctl{position:absolute;right:24px;bottom:24px;display:flex;align-items:center;gap:8px;color:var(--cold)}
+.hero-ctl .mono{font-size:12px;margin-right:6px}
 .hero-r{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:clamp(24px,4vw,72px);background:var(--ice);padding:88px var(--gutter) 120px}
 .hero-r h1{grid-column:1/-1;font-size:clamp(56px,7.6vw,148px);font-weight:500;letter-spacing:-.055em;line-height:.88}
 .sub{grid-column:1;margin-top:28px;font-size:clamp(18px,1.55vw,26px);letter-spacing:-.015em;line-height:1.25}
@@ -48,8 +48,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
 .row span:first-child{opacity:.75}
 
 /* bansko */
-.bansko{position:relative;height:100vh;min-height:560px;overflow:hidden;background:#2B3D5C}
-.reel{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.reel{position:absolute;inset:0;z-index:-2;pointer-events:none;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
 .reel::-webkit-scrollbar{display:none}
 .slide{position:relative;flex:0 0 100%;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden}
 .slide .blur{position:absolute;inset:-8%;background-size:cover;background-position:center;filter:blur(28px) saturate(1.1) brightness(.9);display:none}
@@ -59,8 +58,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
 .slide.inset img{inset:12% 0;height:76%;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,.35)}
 @media (max-aspect-ratio:1/1){.slide.portrait img{object-fit:cover}.slide.portrait .blur{display:none}}
 @keyframes kb{from{transform:scale(1)}to{transform:scale(1.1)}}
-.bansko.live .slide.active img{animation:kb 11s ease-out forwards}
-.corner{position:absolute;right:24px;top:24px;font-size:12px;letter-spacing:.08em;color:var(--cold)}
+.closing-sec.live .slide.active img{animation:kb 11s ease-out forwards}
 
 /* video */
 .video{position:relative;min-height:100vh;background:var(--merlot);color:var(--pale);overflow:hidden;display:flex;align-items:center;justify-content:center;padding:96px 20px 140px}
@@ -150,7 +148,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
 .chip[aria-pressed="true"]{background:var(--dark-red);color:var(--cold);border-color:var(--dark-red)}
 
 /* closing */
-.closing-sec{background:var(--deep);color:#fff;padding:40px var(--gutter) 32px}
+.closing-sec{background:var(--deep);color:#fff;padding:40px var(--gutter) 32px;position:relative;isolation:isolate;overflow:hidden}
+.closing-sec::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(rgba(24,44,84,.62),rgba(24,44,84,.72))}
 .closing{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;border-top:1px solid rgba(255,255,255,.55);padding-top:40px}
 .closing-l{display:flex;flex-direction:column;gap:32px}
 .closing h2{font-size:clamp(44px,5vw,88px);font-weight:500;letter-spacing:-.055em;line-height:.95}
@@ -223,7 +222,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
   .m-item{padding:0 12px;font-size:15px}
   .big-top span{font-size:22px}
 }
-@media (prefers-reduced-motion:reduce){.spin,.pop,.bansko.live .slide.active img{animation:none}html{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){.spin,.pop,.closing-sec.live .slide.active img{animation:none}html{scroll-behavior:auto}}
 
 /* vintage print: serif display headings, matchbook red, paper grain */
 .hero-r h1,.details h2,.lead h2,.map-center h2,.closing h2,.closing-r,.pdetail .pt,.skcard .nm,.big-top span,.big-center,.foot nav,.nl-h,#wordmark{font-family:var(--display);font-weight:500;letter-spacing:-.02em}

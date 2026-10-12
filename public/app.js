@@ -73,12 +73,12 @@
   $('#hero-next').addEventListener('click', function () { heroI = (heroI + 1) % heroN; renderHero(); });
   renderHero();
 
-  // Bansko photo reel: swipe or scroll sideways; each photo zooms slowly, then the next one slides in.
+  // Photo reel behind the closing section: each photo zooms slowly, then the next one slides in (no controls, runs by itself).
   (function () {
-    var sec = $('#bansko'), reelEl = $('#reel'), G = Array.isArray(IMG.bansko) ? IMG.bansko : [];
+    var sec = $('#join'), reelEl = $('#reel'), G = Array.isArray(IMG.bansko) ? IMG.bansko : [];
     if (!G.length) {
       reelEl.appendChild(h('div', { class: 'slide' }, [h('div', { class: 'ph', style: '--ph:#3E5878' }), h('span', { class: 'tag', text: '[Full-screen beauty shot of Bansko]' })]));
-      $('.reel-ctl').hidden = true; return;
+      return;
     }
     var slides = [], idx = 0, live = false, timer = null, lastUser = 0, DWELL = 7500;
     G.forEach(function (g, i) {
@@ -88,7 +88,7 @@
       var sl = h('div', { class: 'slide ' + (g.fit || 'cover'), role: 'group', 'aria-roledescription': 'slide', 'aria-label': (i + 1) + ' of ' + G.length }, kids);
       reelEl.appendChild(sl); slides.push(sl);
     });
-    function count() { $('#reel-count').textContent = ('0' + (idx + 1)).slice(-2) + ' / ' + ('0' + G.length).slice(-2); }
+    function count() { var c = $('#reel-count'); if (c) c.textContent = ('0' + (idx + 1)).slice(-2) + ' / ' + ('0' + G.length).slice(-2); }
     function go(i) { reelEl.scrollTo({ left: i * reelEl.clientWidth, behavior: reduce ? 'auto' : 'smooth' }); }
     function user() { lastUser = Date.now(); }
     function schedule() {
@@ -107,11 +107,9 @@
         });
       }, { root: reelEl, threshold: 0.6 });
       slides.forEach(function (sl) { slideIO.observe(sl); });
-      new IntersectionObserver(function (en) { live = en[0].isIntersecting; sec.classList.toggle('live', live); schedule(); }, { threshold: 0.5 }).observe(sec);
+      new IntersectionObserver(function (en) { live = en[0].isIntersecting; sec.classList.toggle('live', live); schedule(); }, { threshold: 0.1 }).observe(sec);
     } else { slides[0].classList.add('active'); }
     ['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach(function (ev) { reelEl.addEventListener(ev, user, { passive: true }); });
-    $('#reel-prev').addEventListener('click', function () { user(); go(Math.max(0, idx - 1)); });
-    $('#reel-next').addEventListener('click', function () { user(); go(idx + 1 < slides.length ? idx + 1 : 0); });
     count();
   })();
 
