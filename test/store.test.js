@@ -42,6 +42,11 @@ test('SupabaseStore: create, get, update, list, remove', async () => {
   } finally { restore(); }
 });
 
+test('SupabaseStore: accepts the Data API URL as well as the project URL', () => {
+  assert.strictEqual(new SupabaseStore('https://x.supabase.co/rest/v1/', 'k').base, 'https://x.supabase.co/rest/v1/skiers');
+  assert.strictEqual(new SupabaseStore('https://x.supabase.co', 'k').base, 'https://x.supabase.co/rest/v1/skiers');
+});
+
 test('SupabaseStore: legacy JWT keys also send Authorization', () => {
   const s = new SupabaseStore('https://x.supabase.co', 'eyJabc');
   assert.strictEqual(s.headers.Authorization, 'Bearer eyJabc');
