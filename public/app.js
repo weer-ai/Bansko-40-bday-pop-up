@@ -67,6 +67,7 @@
     if (IMG.hero && IMG.hero.length) { applyImage(ph, IMG.hero[heroI]); $('#hero-label').hidden = true; }
     else $('#hero-label').textContent = heroLabels[heroI];
     $('#hero-count').textContent = (heroI + 1) + ' / ' + heroN;
+    $('.hero-ctl').hidden = heroN < 2;
   }
   $('#hero-prev').addEventListener('click', function () { heroI = (heroI + heroN - 1) % heroN; renderHero(); });
   $('#hero-next').addEventListener('click', function () { heroI = (heroI + 1) % heroN; renderHero(); });
