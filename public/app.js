@@ -50,7 +50,7 @@
     var tag = el.parentNode.querySelector('.tag'); if (tag) tag.classList.add('hidden-tag');
   }
   var IMG = SITE.images || {};
-  applyImage($('#slope-photo'), IMG.slope); applyImage($('#bansko-photo'), IMG.bansko); applyImage($('#snow-photo'), IMG.snow);
+  applyImage($('#slope-photo'), IMG.slope); applyImage($('#snow-photo'), IMG.snow);
   $$('[data-closing]').forEach(function (el) { applyImage(el, (IMG.closing || [])[+el.getAttribute('data-closing')]); });
 
   $$('[data-link]').forEach(function (a) {
@@ -72,6 +72,48 @@
   $('#hero-prev').addEventListener('click', function () { heroI = (heroI + heroN - 1) % heroN; renderHero(); });
   $('#hero-next').addEventListener('click', function () { heroI = (heroI + 1) % heroN; renderHero(); });
   renderHero();
+
+  // Bansko photo reel: swipe or scroll sideways; each photo zooms slowly, then the next one slides in.
+  (function () {
+    var sec = $('#bansko'), reelEl = $('#reel'), G = Array.isArray(IMG.bansko) ? IMG.bansko : [];
+    if (!G.length) {
+      reelEl.appendChild(h('div', { class: 'slide' }, [h('div', { class: 'ph', style: '--ph:#3E5878' }), h('span', { class: 'tag', text: '[Full-screen beauty shot of Bansko]' })]));
+      $('.reel-ctl').hidden = true; return;
+    }
+    var slides = [], idx = 0, live = false, timer = null, lastUser = 0, DWELL = 7500;
+    G.forEach(function (g, i) {
+      var kids = [];
+      if (g.fit === 'portrait' || g.fit === 'inset') kids.push(h('div', { class: 'blur', style: 'background-image:url("' + g.src + '")' }));
+      kids.push(h('img', { src: g.src, alt: g.alt || '', loading: i ? 'lazy' : 'eager', decoding: 'async' }));
+      var sl = h('div', { class: 'slide ' + (g.fit || 'cover'), role: 'group', 'aria-roledescription': 'slide', 'aria-label': (i + 1) + ' of ' + G.length }, kids);
+      reelEl.appendChild(sl); slides.push(sl);
+    });
+    function count() { $('#reel-count').textContent = ('0' + (idx + 1)).slice(-2) + ' / ' + ('0' + G.length).slice(-2); }
+    function go(i) { reelEl.scrollTo({ left: i * reelEl.clientWidth, behavior: reduce ? 'auto' : 'smooth' }); }
+    function user() { lastUser = Date.now(); }
+    function schedule() {
+      clearTimeout(timer);
+      if (!live || reduce) return;
+      timer = setTimeout(function () {
+        if (Date.now() - lastUser < 12000) return schedule();
+        if (idx < slides.length - 1) go(idx + 1); // stops on the last photo
+      }, DWELL);
+    }
+    if ('IntersectionObserver' in window) {
+      var slideIO = new IntersectionObserver(function (en) {
+        en.forEach(function (e) {
+          e.target.classList.toggle('active', e.isIntersecting);
+          if (e.isIntersecting) { idx = slides.indexOf(e.target); count(); schedule(); }
+        });
+      }, { root: reelEl, threshold: 0.6 });
+      slides.forEach(function (sl) { slideIO.observe(sl); });
+      new IntersectionObserver(function (en) { live = en[0].isIntersecting; sec.classList.toggle('live', live); schedule(); }, { threshold: 0.5 }).observe(sec);
+    } else { slides[0].classList.add('active'); }
+    ['pointerdown', 'touchstart', 'wheel', 'keydown'].forEach(function (ev) { reelEl.addEventListener(ev, user, { passive: true }); });
+    $('#reel-prev').addEventListener('click', function () { user(); go(Math.max(0, idx - 1)); });
+    $('#reel-next').addEventListener('click', function () { user(); go(idx + 1 < slides.length ? idx + 1 : 0); });
+    count();
+  })();
 
   // video
   $('#play').addEventListener('click', function () {
