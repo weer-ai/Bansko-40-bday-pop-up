@@ -124,7 +124,7 @@
       var btn = h('button', { type: 'button', class: 'place' + (p.id === 'tip' ? ' tip' : ''), 'aria-pressed': String(on), 'aria-label': p.name + ', details',
         onclick: function () { state.place = on ? null : p.id; renderPlaces(); } });
       btn.innerHTML = '<span class="exp"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 2 H16 V7 M16 2 L10 8 M7 16 H2 V11 M2 16 L8 10" stroke="currentColor" stroke-width="1.2"/></svg></span>' +
-        '<svg class="icon" viewBox="0 0 120 120" fill="none" stroke="#6C171E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[p.icon] + '</svg>';
+        '<svg class="icon" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[p.icon] + '</svg>';
       grid.appendChild(h('div', { class: 'pcell' }, [btn, h('span', { class: 'pname', text: p.name }), h('span', { class: 'pcat', text: p.cat })]));
     });
     var box = $('#place-detail'), p = PLACES.filter(function (x) { return x.id === state.place; })[0];
@@ -206,7 +206,7 @@
     return list;
   }
   var THREAD_KEYS = ORIGINS.map(function (o) { return o.id; }).concat(['host', 'hot']);
-  var THREAD_STYLE = { host: ['#2A0A0E', 1.1, 0.4], hot: ['#5A1219', 1.8, 0.9] };
+  var THREAD_STYLE = { host: ['#2A0A0E', 1.1, 0.4], hot: ['#B8300F', 1.8, 0.9] };
   ORIGINS.forEach(function (o) { THREAD_STYLE[o.id] = [o.color, 1.1, 0.4]; });
 
   /* ---------- map views ---------- */
@@ -228,7 +228,7 @@
         var b = h('button', { type: 'button', class: 'skier', 'aria-label': (p.host ? 'Ting, your host' : p.name) + ', open their card',
           onclick: function () { state.sel = state.sel === p.id ? null : p.id; if (state.sel !== p.id) { state.justAdded = null; renderJust(); } } });
         b.innerHTML = '<svg width="20" height="36" viewBox="0 0 20 36" aria-hidden="true">' +
-          '<circle class="ring" cx="10" cy="17" r="15" fill="none" stroke="#5A1219" stroke-width="1.3" opacity="0"/>' +
+          '<circle class="ring" cx="10" cy="17" r="15" fill="none" stroke="#B8300F" stroke-width="1.3" opacity="0"/>' +
           '<ellipse cx="13" cy="20" rx="6" ry="13" fill="rgba(42,10,14,0.10)"/>' +
           '<rect x="5" y="2" width="2.4" height="32" rx="1.2" fill="#2B2D2B"/><rect x="12.6" y="2" width="2.4" height="32" rx="1.2" fill="#2B2D2B"/>' +
           '<path d="M4 15 L1 25 M16 15 L19 25" stroke="#6A6C68" stroke-width="0.9" stroke-linecap="round"/>' +
