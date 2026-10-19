@@ -15,11 +15,15 @@ const MIME = {
   '.woff2': 'font/woff2', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8'
 };
 
-// What visitors may see. Email, edit token and hidden flag never leave the server here.
+// What visitors may see. Email, edit token, hidden flag and the private ski-pass / extra-bag answers never leave the server here.
+// Entries saved before the FourTing design have no type, rel, dates or photo; the page falls back for those.
 const publicView = (s) => ({
   id: s.id, name: s.name, from: s.from, fromOther: s.fromOther, parts: s.parts,
-  stay: s.stay, where: s.where, msg: s.msg, jacket: s.jacket, hat: s.hat
+  stay: s.stay, where: s.where, msg: s.msg, jacket: s.jacket, hat: s.hat,
+  type: s.type, rel: s.rel, arrive: s.arrive, leave: s.leave, photo: s.photo
 });
+// Extra answers only Ting sees (admin list and the owner's own edit form).
+const privateView = (s) => ({ email: s.email || '', pass: s.pass || '', bag: !!s.bag });
 
 const safeEq = (a, b) => {
   const x = Buffer.from(String(a)), y = Buffer.from(String(b));
@@ -64,7 +68,8 @@ function createHandler(opts = {}) {
       } catch (e) { return reject(e); }
     }
     let n = 0; const chunks = [];
-    req.on('data', (c) => { n += c.length; if (n > 20000) { reject(new Error('too big')); req.destroy(); } else chunks.push(c); });
+    // 64 KB: room for the small base64 photo.
+    req.on('data', (c) => { n += c.length; if (n > 64000) { reject(new Error('too big')); req.destroy(); } else chunks.push(c); });
     req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch (e) { reject(e); } });
     req.on('error', reject);
   });
@@ -91,7 +96,7 @@ function createHandler(opts = {}) {
         if ((await store.list()).length >= maxSkiers) return send(res, 503, { error: 'The slope is full.' });
         const v = validateSkier(body);
         if (!v.ok) return send(res, 400, { error: v.error });
-        const s = await store.create(Object.assign({}, v.value, { hat: hatFor(v.value.name) }));
+        const s = await store.create(Object.assign({}, v.value, { hat: v.value.hat || hatFor(v.value.name) }));
         return send(res, 201, { skier: publicView(s), editToken: s.editToken });
       }
     }
@@ -103,7 +108,7 @@ function createHandler(opts = {}) {
       let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
       const v = validateSkier(body);
       if (!v.ok) return send(res, 400, { error: v.error });
-      const u = await store.update(s.id, Object.assign({}, v.value, { hat: hatFor(v.value.name) }));
+      const u = await store.update(s.id, Object.assign({}, v.value, { hat: v.value.hat || hatFor(v.value.name) }));
       return send(res, 200, { skier: publicView(u) });
     }
 
@@ -112,13 +117,13 @@ function createHandler(opts = {}) {
       const s = await store.get(parts[2]);
       const tok = req.headers['x-edit-token'] || '';
       if (!s || !tok || !safeEq(tok, s.editToken)) return send(res, 403, { error: 'Not found.' });
-      return send(res, 200, { skier: Object.assign(publicView(s), { email: s.email || '' }) });
+      return send(res, 200, { skier: Object.assign(publicView(s), privateView(s)) });
     }
 
     if (parts[1] === 'admin') {
       if (!isAdmin(req)) return send(res, 401, { error: 'Unauthorized.' });
       if (parts[2] === 'skiers' && parts.length === 3 && m === 'GET')
-        return send(res, 200, (await store.list()).map((s) => Object.assign(publicView(s), { email: s.email || '', hidden: !!s.hidden, createdAt: s.createdAt, sample: !!s.sample })));
+        return send(res, 200, (await store.list()).map((s) => Object.assign(publicView(s), privateView(s), { hidden: !!s.hidden, createdAt: s.createdAt, sample: !!s.sample })));
       const id = parts[3];
       if (parts[2] === 'skiers' && id && parts[4] === 'hide' && m === 'POST') return send(res, (await store.update(id, { hidden: true })) ? 200 : 404, { ok: true });
       if (parts[2] === 'skiers' && id && parts[4] === 'unhide' && m === 'POST') return send(res, (await store.update(id, { hidden: false })) ? 200 : 404, { ok: true });
