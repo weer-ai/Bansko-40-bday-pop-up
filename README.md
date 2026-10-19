@@ -99,7 +99,7 @@ Email is stored privately for Ting to reach people, but **no email is sent**. If
 1. Import the repo in Vercel.
 2. Supabase: create a project, then run `supabase/schema.sql` in the SQL Editor (creates the `skiers` table with row level security on and no policies, so the public key can read nothing).
 3. Vercel, Settings, Environment Variables: add `SUPABASE_URL` (Project URL) and `SUPABASE_SERVICE_ROLE_KEY` (the secret / service_role key; never expose it in the browser), plus `ADMIN_TOKEN`. The Vercel Supabase integration can set the first two for you.
-4. Redeploy. Without a database the API answers 503 with a message saying so.
+4. Redeploy. Without a database the API answers 503, and the message (shown on the sign-up form) names the missing variables and whether it is the Preview or Production deployment. Variables ticked for Production only are not seen by Preview deployments such as branch builds.
 
 ### Anywhere else
 
