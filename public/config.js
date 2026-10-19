@@ -2,8 +2,7 @@
 window.SITE = {
   links: {
     whatsapp: '',        // WhatsApp group invite link
-    luma: '',            // Luma calendar link (hidden while empty)
-    valentinaBooking: '' // Valentina Heights booking link
+    luma: ''             // Luma calendar link (hidden while empty)
   },
   // How busy the slope looks. maxRiders is how many people ski at once; speed scales all motion.
   sim: { maxRiders: 9, speed: 1 }

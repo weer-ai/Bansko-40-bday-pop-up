@@ -491,7 +491,7 @@
     const ev = (uid, from, to, summary, desc) => ['BEGIN:VEVENT', 'UID:' + uid + '@fourting-bansko', 'DTSTAMP:' + stamp, 'DTSTART;VALUE=DATE:' + from, 'DTEND;VALUE=DATE:' + to, 'SUMMARY:' + summary, 'DESCRIPTION:' + desc, 'LOCATION:Bansko\\, Bulgaria', 'END:VEVENT'];
     const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FourTing//Bansko 2027//EN', 'CALSCALE:GREGORIAN']
       .concat(ev('trip', '20270206', '20270221', "FourTing's Birthday in Bansko", 'Two weeks in the mountains for Ting\\\'s 40th. Sat 6 to Sat 20 February 2027.'))
-      .concat(ev('day', '20270212', '20270213', 'The 12th: skiing together, then the spa', 'Skiing together by day, Grand Hotel Therme by night. Ski pass on Ting.'))
+      .concat(ev('day', '20270212', '20270213', 'The 12th: skiing together, then the spa', 'Skiing together on the slope, then the spa at Pulse Therme (night to be confirmed). Ski pass on Ting.'))
       .concat(['END:VCALENDAR']);
     const a = h('a', { href: URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/calendar' })), download: 'fourting-bansko-2027.ics' });
     document.body.appendChild(a); a.click(); a.remove();
