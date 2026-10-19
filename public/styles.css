@@ -61,9 +61,8 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
 .closing-sec.live .slide.active img{animation:kb 11s ease-out forwards}
 
 /* video */
-.video{position:relative;min-height:100vh;background:var(--merlot);color:var(--pale);overflow:hidden;display:flex;align-items:center;justify-content:center;padding:96px 20px 140px}
-.behind{position:absolute;left:62%;top:24%;width:21%;height:55%;overflow:hidden}
-.circle{position:relative;z-index:1;width:min(46vw,640px);min-width:280px;aspect-ratio:1/1;border-radius:50%;overflow:hidden;box-shadow:0 30px 60px rgba(20,4,6,.35);background:#2B3D5C}
+.video{--d:min(40vw,560px);--hz:clamp(54px,8.5vw,124px);position:relative;min-height:100vh;background:var(--merlot);color:var(--pale);overflow:hidden;display:flex;align-items:center;justify-content:center;padding:96px 20px 140px}
+.circle{position:relative;z-index:1;width:var(--d);aspect-ratio:1/1;border-radius:50%;overflow:hidden;box-shadow:0 30px 60px rgba(20,4,6,.35);background:#2B3D5C}
 .spin{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#3E5878 0 46%,#2B3D5C 46% 100%);animation:spin 48s linear infinite}
 .spin svg{position:absolute;inset:0;width:100%;height:100%}
 .spin text{font-family:var(--mono);font-size:13px;letter-spacing:6px}
@@ -213,7 +212,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid curre
   .hero-r{grid-template-columns:minmax(0,1fr)}
   .hero-r .side{grid-column:1;grid-row:auto;max-width:280px}
   .closing,.foot{grid-template-columns:minmax(0,1fr)}
-  .behind,.hide-sm{display:none}
+  .hide-sm{display:none}
   .vcopy{position:static;margin-top:32px}
   .video{flex-direction:column;padding-bottom:140px}
   #wordmark{font-size:26px}
@@ -239,3 +238,12 @@ body::after{content:"";position:fixed;inset:0;z-index:90;pointer-events:none;opa
 .title .t-line{display:block;font-style:italic;font-weight:600}
 .title .t-last{display:flex;align-items:baseline;font-style:normal;font-weight:600}
 .title .t-in{font-size:.4em;font-weight:500;margin-right:.3em;text-decoration:underline;text-decoration-thickness:.06em;text-underline-offset:.18em}
+
+/* 四十不惑 around the video circle, clockwise from the top */
+.stage{display:grid;grid-template-columns:auto var(--d) auto;grid-template-rows:auto var(--d) auto;align-items:center;justify-items:center}
+.hz{font-family:'Noto Serif TC','Songti TC','Source Han Serif TC','PMingLiU',serif;font-weight:700;font-size:var(--hz);line-height:1;color:var(--pale);padding:.1em}
+.hz-t{grid-column:2;grid-row:1}.hz-l{grid-column:1;grid-row:2}.hz-r{grid-column:3;grid-row:2}.hz-b{grid-column:2;grid-row:3}
+@media (max-width:760px){
+  .video{--hz:clamp(44px,12vw,64px);--d:calc(100vw - 2*var(--hz) - 72px)}
+  .play{width:80px;height:80px;margin:-40px 0 0 -40px}
+}

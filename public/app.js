@@ -50,7 +50,7 @@
     var tag = el.parentNode.querySelector('.tag'); if (tag) tag.classList.add('hidden-tag');
   }
   var IMG = SITE.images || {};
-  applyImage($('#slope-photo'), IMG.slope); applyImage($('#snow-photo'), IMG.snow);
+  applyImage($('#slope-photo'), IMG.slope);
   $$('[data-closing]').forEach(function (el) { applyImage(el, (IMG.closing || [])[+el.getAttribute('data-closing')]); });
 
   $$('[data-link]').forEach(function (a) {

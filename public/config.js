@@ -18,7 +18,6 @@ window.SITE = {
       { src: 'media/bansko-4.jpg', alt: 'A painted gondola above a ski village', fit: 'portrait' },
       { src: 'media/bansko-5.jpg', alt: 'Illustrated ski map of Bansko', fit: 'inset' }
     ],
-    snow: '',            // snow & ski tracks
     closing: []          // 3 photos
   },
   videoUrl: ''           // Ting's video invitation, e.g. '/media/invite.mp4'
