@@ -73,3 +73,21 @@ test('handler answers 503 with a clear message when storage is missing', async (
     if (saved.U !== undefined) process.env.SUPABASE_URL = saved.U;
   }
 });
+
+test('missing database: the message names what is missing, where, and likely typos (never values)', () => {
+  const msg = (env) => { try { makeStore(env); } catch (e) { return e.message; } return ''; };
+  // a preview deployment that only has the Production variables, plus one misspelled name
+  const preview = msg({ VERCEL: '1', VERCEL_ENV: 'preview', SUPABASE_SERVICE_ROLE_KE: 'secret-value' });
+  assert.match(preview, /No database configured on this preview deployment/);
+  assert.match(preview, /Missing: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY\./);
+  assert.match(preview, /add them for Preview/);
+  assert.match(preview, /Check the spelling of: SUPABASE_SERVICE_ROLE_KE\./);
+  assert.ok(!preview.includes('secret-value'));
+  // only one of the two is missing
+  const prod = msg({ VERCEL: '1', VERCEL_ENV: 'production', SUPABASE_URL: 'https://x.supabase.co' });
+  assert.match(prod, /Missing: SUPABASE_SERVICE_ROLE_KEY\./);
+  assert.match(prod, /for Production/);
+  assert.ok(!/SUPABASE_URL/.test(prod.replace('Missing: SUPABASE_SERVICE_ROLE_KEY', '')));
+  // the older secret-key name still counts
+  assert.ok(makeStore({ VERCEL: '1', SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SECRET_KEY: 'k' }) instanceof SupabaseStore);
+});
