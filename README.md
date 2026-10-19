@@ -83,8 +83,9 @@ Email is stored privately for Ting to reach people, but **no email is sent**. If
 ## Filling in the placeholders
 
 - Links (WhatsApp, Luma, Valentina Heights booking): `public/config.js`. While a link is empty its button is greyed out with a `[... LINK]` note (Luma stays hidden). "Add to calendar" is generated in the browser as an `.ics`, no link needed.
-- Text still to confirm (ski rental partner and pop-up rate, Grand Hotel Therme time and entry price, coworking and gym names and prices, second-person price at Valentina Heights): bracketed placeholders in the panels in `public/index.html`. Search for `[`.
-- Prices to re-check before launch: the bus price and timetable came from a travel blog, and 2026/27 lift prices are not published yet (last season's day pass was about €56).
+- Text still to confirm, as bracketed placeholders in the panels in `public/index.html` (search for `[`): Grand Hotel Therme time and entry price, coworking and gym names and prices, the second-person price at Valentina Heights, and the Valentina Heights booking link (the button stays greyed out until `valentinaBooking` is set in `public/config.js`; the map link is already in).
+- Links already in the panels (edit them in `public/index.html`): Valentina Heights, Traventuria and Pulse Therme Spa on Google Maps, transferbansko.com (drop-off by the Gondola), busexpress.bg.
+- Prices to re-check before launch: the Sofia to Bansko transfer price is not on the page yet (the bus figures came from a travel blog), flight prices are rough, and 2026/27 lift prices are not published yet (last season's day pass was about €56). The budget total was recomputed from the Valentina Heights prices of €300 a week for a studio and €350 for a one-bedroom.
 - How busy the slope looks: `sim.maxRiders` and `sim.speed` in `public/config.js`.
 - The riders on the slope are real sign-ups plus Ting as the host. `npm run dev` adds sample riders so the slope is not empty while developing; they are never created in production.
 - `public/media/` holds photos from the previous design. The page does not use them.
