@@ -27,6 +27,7 @@ No dependencies, Node 18+. Static frontend in `public/`, small API in `server.js
 
 - `GET /api/skiers`: public skiers (never email, token, ski-pass or extra-bag answers, or hidden entries)
 - `POST /api/skiers`: sign up. Returns `{ skier, editToken }`. Rate limited, honeypot field `website`
+- `POST /api/skiers/find` with `{ name, pin }`: returns `{ id, editToken }` for the matching entry, otherwise 403 (or 429 while that entry is locked)
 - `PUT /api/skiers/:id` with `X-Edit-Token`: edit your entry
 - Moderation, header `Authorization: Bearer $ADMIN_TOKEN`:
   - `GET /api/admin/skiers`: everything, including email and hidden
@@ -52,6 +53,7 @@ The `skiers` table and the API did not change shape: each entry is one JSON docu
 | `where` | Valentina Heights / My own place in Bansko / A hotel in town / Still deciding |
 | `photo` | optional square JPEG data URL, at most 16,000 characters. The page crops and compresses it in the browser |
 | `email` | optional, private |
+| `pin` | 4 to 8 digits, sent on sign-up or to change it, kept only as a hash. The page requires it for new sign-ups; the API treats it as optional |
 | `pass` | private: `yes` (Ting pays the pass on the 12th), `self`, `no` |
 | `bag` | private: offered to check an extra bag of Ting's things |
 
@@ -70,7 +72,13 @@ curl -s -H "$A" $U | jq -r '.[] | select(.email != "") | "\(.name)\t\(.email)"' 
 
 ## Editing an entry
 
-After signing up, the visitor's browser remembers the entry and the page shows a private edit link (`/#edit=<id>.<token>`) with a copy button. Opening that link on any device reopens the form; on the same browser, the Join the slope sign opens straight into edit mode. Email is stored privately but **no email is sent yet**: wiring a provider (e.g. Resend) to mail the edit link is the remaining step.
+There are no accounts. A friend gets back into their entry in three ways:
+
+1. **Same browser:** it remembers the entry, so the Join the slope sign opens straight into edit mode.
+2. **Name + PIN, any phone:** at sign-up they pick a 4 to 8 digit PIN. Later: Join the slope, then "Already signed up? Edit my entry", then name and PIN. The name is matched without case or extra spaces. The PIN is stored only as a salted scrypt hash and is never in any API response. Five wrong PINs lock that entry for 15 minutes (the failure count is stored with the entry, so it holds on Vercel too), and the error message is the same whether the name or the PIN was wrong.
+3. **Private edit link:** `/#edit=<id>.<token>`, shown after sign-up with a copy button.
+
+Email is stored privately for Ting to reach people, but **no email is sent**. If someone forgets their PIN, delete their entry with the admin API (below) and they sign up again. The admin list shows `hasPin`, so you can see who has no PIN. Entries from before PINs existed can only be edited through their edit link; they can set a PIN from there.
 
 ## Filling in the placeholders
 

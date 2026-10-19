@@ -231,6 +231,8 @@ img.photo-ring { border: none; box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ink);
 .bag .sm { opacity: 0.75; }
 .err { font-size: 15px; color: #B01E31; font-weight: 600; }
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.already { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px 10px 14px; border: 1.5px solid var(--cobalt); border-radius: 6px; background: #EEF4FC; font-size: 15px; }
+.btn-sm { height: 44px; padding: 0 16px; font-size: 16px; }
 .link-row { display: flex; gap: 8px; }
 .link-row .input { font-size: 14px; }
 .linkbtn { align-self: flex-start; padding: 0; border: none; background: none; cursor: pointer; font-size: 14px; color: var(--muted); text-decoration: underline; min-height: 44px; }

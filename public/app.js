@@ -523,29 +523,66 @@
   const loadList = () => api('GET', '/api/skiers').then((list) => { syncPeople(list.map(fromApi)); });
 
   /* ---------- join the slope ---------- */
-  const blank = () => ({ name: '', photo: '', type: 'skier', jacket: JACKETS[0], helmet: HELMETS[0], rel: '', a: 0, b: 0, where: '', pass: '', msg: '', bag: false, email: '', website: '', err: '' });
+  const blank = () => ({ name: '', photo: '', type: 'skier', jacket: JACKETS[0], helmet: HELMETS[0], rel: '', a: 0, b: 0, where: '', pass: '', msg: '', bag: false, email: '', pin: '', hasPin: false, website: '', err: '' });
+  const PIN_RE = /^\d{4,8}$/;
+  const setTitle = (t) => { const el = overlay && $('.p-title', overlay); if (el) el.textContent = t; };
   const label = (text, forId) => h('label', { class: 'flabel', for: forId, text: text });
 
-  function buildJoin(panel, forceNew) {
+  function buildJoin(panel) {
     const head = h('div', { class: 'p-head ph-join' }, [h('span', { class: 'p-eyebrow', text: 'YOU’LL SKI DOWN THE PAGE ONCE YOU’RE IN' }), h('h2', { class: 'p-title', text: 'JOIN THE SLOPE' })]);
     const body = h('div', { class: 'p-body' });
     panel.appendChild(head); panel.appendChild(body);
-    if (mine && !forceNew) {
-      head.querySelector('.p-title').textContent = 'EDIT YOUR RIDER';
-      body.appendChild(h('p', { class: 'lead', text: 'Loading your entry…' }));
-      api('GET', '/api/skiers/' + encodeURIComponent(mine.id), null, { 'X-Edit-Token': mine.token }).then((r) => {
-        const s = r.skier, d = blank();
-        Object.assign(d, { name: s.name, photo: okPhoto(s.photo), type: ['skier', 'board', 'walker'].indexOf(s.type) >= 0 ? s.type : 'skier', jacket: hex(s.jacket, JACKETS[0]), helmet: hex(s.hat, HELMETS[0]),
-          rel: s.rel || relText(fromApi(s)), a: s.arrive | 0, b: s.leave | 0, where: s.where === 'Still deciding' ? '' : s.where, pass: s.pass || '', msg: s.msg || '', bag: !!s.bag, email: s.email || '' });
-        if (d.a && !d.b) d.b = d.a;
-        if (overlay) renderJoin(body, d, true);
-      }).catch(() => {
-        saveMine(null);
-        const d = blank(); d.err = 'Your edit link is no longer valid. Sign up again below.';
-        head.querySelector('.p-title').textContent = 'JOIN THE SLOPE';
-        if (overlay) renderJoin(body, d, false);
-      });
-    } else renderJoin(body, blank(), false);
+    if (mine) loadEdit(body); else renderJoin(body, blank(), false);
+  }
+
+  // Opens this browser's own entry (from the stored edit token) in the form.
+  function loadEdit(body) {
+    setTitle('EDIT YOUR RIDER');
+    body.textContent = '';
+    body.appendChild(h('p', { class: 'lead', text: 'Loading your entry…' }));
+    api('GET', '/api/skiers/' + encodeURIComponent(mine.id), null, { 'X-Edit-Token': mine.token }).then((r) => {
+      const s = r.skier, d = blank();
+      Object.assign(d, { name: s.name, photo: okPhoto(s.photo), type: ['skier', 'board', 'walker'].indexOf(s.type) >= 0 ? s.type : 'skier', jacket: hex(s.jacket, JACKETS[0]), helmet: hex(s.hat, HELMETS[0]),
+        rel: s.rel || relText(fromApi(s)), a: s.arrive | 0, b: s.leave | 0, where: s.where === 'Still deciding' ? '' : s.where, pass: s.pass || '', msg: s.msg || '', bag: !!s.bag, email: s.email || '', hasPin: !!s.hasPin });
+      if (d.a && !d.b) d.b = d.a;
+      if (overlay) renderJoin(body, d, true);
+    }).catch(() => {
+      saveMine(null);
+      const d = blank(); d.err = 'Your edit link is no longer valid. Sign up again below.';
+      setTitle('JOIN THE SLOPE');
+      if (overlay) renderJoin(body, d, false);
+    });
+  }
+
+  // "Already signed up?": name + PIN on any device gives back the edit link.
+  function renderFind(body) {
+    setTitle('FIND YOUR ENTRY');
+    body.textContent = '';
+    const f = { name: '', pin: '' };
+    const err = h('span', { class: 'err', role: 'alert', hidden: true });
+    const enter = (e) => { if (e.key === 'Enter') submit(); };
+    const nameIn = h('input', { class: 'input', id: 'f-name', type: 'text', maxlength: '40', autocomplete: 'given-name', placeholder: 'The name you signed up with', oninput: (e) => { f.name = e.target.value; }, onkeydown: enter });
+    const pinIn = h('input', { class: 'input', id: 'f-pin', type: 'text', inputmode: 'numeric', pattern: '[0-9]*', maxlength: '8', autocomplete: 'off', placeholder: 'Your PIN', oninput: (e) => { f.pin = e.target.value.replace(/\D/g, '').slice(0, 8); e.target.value = f.pin; }, onkeydown: enter });
+    const go = h('button', { type: 'button', class: 'btn btn-go', text: 'FIND MY ENTRY', onclick: submit });
+    body.appendChild(h('div', { class: 'jform' }, [
+      h('p', { class: 'lead', text: 'Enter the name and PIN you signed up with.' }),
+      h('div', { class: 'field' }, [label('Your name', 'f-name'), nameIn]),
+      h('div', { class: 'field' }, [label('Your PIN', 'f-pin'), pinIn]),
+      err, go,
+      h('span', { class: 'note', text: 'Signed up before PINs existed? Open your private edit link instead, or ask Ting to remove your old entry so you can sign up again.' }),
+      h('button', { type: 'button', class: 'linkbtn', text: 'Back to sign up', onclick: () => { setTitle('JOIN THE SLOPE'); renderJoin(body, blank(), false); } })
+    ]));
+    nameIn.focus();
+
+    function submit() {
+      err.hidden = true;
+      if (!f.name.trim() || !f.pin) { err.textContent = 'Enter the name and PIN you signed up with.'; err.hidden = false; return; }
+      go.disabled = true;
+      api('POST', '/api/skiers/find', { name: f.name.trim(), pin: f.pin }).then((r) => {
+        saveMine({ id: r.id, token: r.editToken });
+        if (overlay) loadEdit(body);
+      }).catch((e) => { err.textContent = e.message; err.hidden = false; go.disabled = false; });
+    }
   }
 
   function renderJoin(body, d, editing) {
@@ -618,6 +655,7 @@
 
     const msgIn = h('input', { class: 'input', id: 'j-msg', type: 'text', maxlength: '60', placeholder: 'e.g. Happy Birthday!', value: d.msg, oninput: (e) => { d.msg = e.target.value.slice(0, 60); } });
     const emailIn = h('input', { class: 'input', id: 'j-email', type: 'email', maxlength: '120', autocomplete: 'email', placeholder: 'you@example.com', value: d.email, oninput: (e) => { d.email = e.target.value; d.err = ''; } });
+    const pinIn = h('input', { class: 'input', id: 'j-pin', type: 'text', inputmode: 'numeric', pattern: '[0-9]*', maxlength: '8', autocomplete: 'off', placeholder: editing && d.hasPin ? 'Keep my current PIN' : 'e.g. 4 digits', oninput: (e) => { d.pin = e.target.value.replace(/\D/g, '').slice(0, 8); e.target.value = d.pin; d.err = ''; } });
     const bag = h('button', { type: 'button', class: 'bag', onclick: () => { d.bag = !d.bag; sync(); } }, [
       h('span', { class: 'box', 'aria-hidden': 'true' }),
       h('span', null, ['I’m flying from the Netherlands and happy to check an extra bag of Ting’s things for her winter home in Bansko. ', h('span', { class: 'sm', text: 'Ting will pay for the extra bag.' })])
@@ -628,6 +666,7 @@
     const go = h('button', { type: 'button', class: 'btn btn-go', text: editing ? 'SAVE CHANGES' : 'DROP IN AT THE TOP ↓', onclick: submit });
 
     const form = h('div', { class: 'jform' }, [
+      editing ? null : h('div', { class: 'already' }, [h('span', { text: 'Already signed up?' }), h('button', { type: 'button', class: 'btn btn-line btn-sm', text: 'EDIT MY ENTRY', onclick: () => renderFind(body) })]),
       h('div', { class: 'who' }, [
         h('div', { class: 'preview' }, [figSh, fig]),
         h('div', { class: 'who-fields' }, [h('div', { class: 'field' }, [label('Your name', 'j-name'), nameIn]), h('div', { class: 'photo-row' }, [photoBox, removeBtn])])
@@ -643,7 +682,9 @@
       head('On the slope on the 12th? Your pass is on Ting'),
       h('div', { class: 'gap-up' }, group(PASS, 'chips', (t) => d.pass === t.id, (t) => { d.pass = d.pass === t.id ? '' : t.id; })),
       h('div', { class: 'field' }, [label('What will you shout (to Ting) as you ski past?', 'j-msg'), msgIn]),
-      h('div', { class: 'field' }, [label('Email (optional, private)', 'j-email'), emailIn, h('span', { class: 'note', text: 'Only Ting sees it. It lets Ting reach you, and is how your entry is kept so you can change it later.' })]),
+      h('div', { class: 'field' }, [label('Email (optional, private)', 'j-email'), emailIn, h('span', { class: 'note', text: 'Only Ting sees it. It lets Ting reach you.' })]),
+      h('div', { class: 'field' }, [label(editing ? (d.hasPin ? 'Change your PIN (optional)' : 'Set a PIN, so you can edit from any phone') : 'PIN to edit your entry later', 'j-pin'), pinIn,
+        h('span', { class: 'note', text: editing && d.hasPin ? 'Leave it empty to keep your current PIN.' : '4 to 8 digits. On another phone, tap Join the slope, then “Already signed up?” and enter your name and this PIN.' })]),
       bag,
       h('input', { type: 'text', class: 'hp', name: 'website', tabindex: '-1', autocomplete: 'off', 'aria-hidden': 'true', oninput: (e) => { d.website = e.target.value; } }),
       err, go
@@ -653,7 +694,7 @@
         head('Your private edit link'),
         h('div', { class: 'link-row' }, [h('input', { class: 'input', type: 'text', readonly: true, value: editUrl(), 'aria-label': 'Your private edit link', onfocus: (e) => e.target.select() }),
           h('button', { type: 'button', class: 'mini', text: 'Copy', onclick: (e) => copyText(editUrl(), e.target) })]),
-        h('button', { type: 'button', class: 'linkbtn', text: 'Not you? Sign up someone new', onclick: () => { $('.p-title', overlay).textContent = 'JOIN THE SLOPE'; renderJoin(body, blank(), false); } })
+        h('button', { type: 'button', class: 'linkbtn', text: 'Not you? Sign up someone new', onclick: () => { setTitle('JOIN THE SLOPE'); renderJoin(body, blank(), false); } })
       ]));
     }
     body.appendChild(form);
@@ -664,9 +705,12 @@
       if (!name) d.err = 'Add your name first.';
       else if (!d.rel.trim()) d.err = 'Tell us who you are to Ting, or tap a cue.';
       else if (!d.a) d.err = 'Tap your arrival day, then your last day.';
+      else if (!editing && !PIN_RE.test(d.pin)) d.err = 'Pick a PIN of 4 to 8 digits, so you can edit your entry later.';
+      else if (editing && d.pin && !PIN_RE.test(d.pin)) d.err = 'Your PIN needs 4 to 8 digits.';
       if (d.err) { sync(); return; }
       const payload = { name: name, rel: d.rel.trim(), type: d.type, jacket: d.jacket, hat: d.helmet, arrive: d.a, leave: d.b || d.a, where: d.where || 'Still deciding',
         msg: d.msg.trim() || 'Here I come!', pass: d.pass, bag: d.bag, email: d.email.trim(), photo: d.photo, website: d.website };
+      if (d.pin) payload.pin = d.pin;
       go.disabled = true;
       try {
         const r = editing && mine ? await api('PUT', '/api/skiers/' + encodeURIComponent(mine.id), payload, { 'X-Edit-Token': mine.token }) : await api('POST', '/api/skiers', payload);
@@ -691,15 +735,19 @@
     }
   }
 
-  // After a new sign-up: the private edit link is shown once here; no email is sent.
+  // After a new sign-up: how to get back in (name + PIN, or the private edit link); no email is sent.
   function showDone(body, p) {
     body.textContent = '';
     body.appendChild(h('p', { class: 'lead', text: 'You’re on the slope, ' + p.name + '. You’ll drop in at the top.' }));
     body.appendChild(h('div', { class: 'field' }, [
-      h('span', { class: 'flabel', text: 'Your private edit link' }),
+      h('span', { class: 'flabel', text: 'Changing your mind later?' }),
+      h('span', { text: 'Tap Join the slope, then “Already signed up?”, and enter your name and PIN. It works on any phone.' })
+    ]));
+    body.appendChild(h('div', { class: 'field' }, [
+      h('span', { class: 'flabel', text: 'Or use your private edit link' }),
       h('div', { class: 'link-row' }, [h('input', { class: 'input', type: 'text', readonly: true, value: editUrl(), 'aria-label': 'Your private edit link', onfocus: (e) => e.target.select() }),
         h('button', { type: 'button', class: 'mini', text: 'Copy', onclick: (e) => copyText(editUrl(), e.target) })]),
-      h('span', { class: 'note', text: 'Keep it to change your entry later, from any device. Anyone with this link can edit your entry, so don’t post it.' })
+      h('span', { class: 'note', text: 'Anyone with this link can edit your entry, so don’t post it.' })
     ]));
     body.appendChild(h('button', { type: 'button', class: 'btn btn-go self-start', text: 'WATCH ME DROP IN ↓', onclick: closePanel }));
   }

@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { makeStore } = require('./lib/store');
 const { validateSkier, hatFor } = require('./lib/validate');
 const { sampleSkiers } = require('./lib/sample');
+const { PIN_RE, MAX_TRIES, LOCK_MS, hashPin, checkPin, normName } = require('./lib/pin');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME = {
@@ -23,7 +24,7 @@ const publicView = (s) => ({
   type: s.type, rel: s.rel, arrive: s.arrive, leave: s.leave, photo: s.photo
 });
 // Extra answers only Ting sees (admin list and the owner's own edit form).
-const privateView = (s) => ({ email: s.email || '', pass: s.pass || '', bag: !!s.bag });
+const privateView = (s) => ({ email: s.email || '', pass: s.pass || '', bag: !!s.bag, hasPin: !!s.pinHash });
 
 const safeEq = (a, b) => {
   const x = Buffer.from(String(a)), y = Buffer.from(String(b));
@@ -49,6 +50,16 @@ function createHandler(opts = {}) {
     arr.push(now); hits.set(ip, arr);
     return arr.length > 10;
   };
+
+  // Same idea for PIN lookups: 30 tries per 10 minutes per IP. The real brake is the per-entry lock below.
+  const finds = new Map();
+  const findLimited = (ip) => {
+    const now = Date.now();
+    const arr = (finds.get(ip) || []).filter((t) => now - t < 600000);
+    arr.push(now); finds.set(ip, arr);
+    return arr.length > 30;
+  };
+  const pinFrom = (body) => (body.pin == null ? '' : String(body.pin).trim());
 
   const send = (res, code, body, headers = {}) => {
     const isStr = typeof body === 'string' || Buffer.isBuffer(body);
@@ -96,9 +107,36 @@ function createHandler(opts = {}) {
         if ((await store.list()).length >= maxSkiers) return send(res, 503, { error: 'The slope is full.' });
         const v = validateSkier(body);
         if (!v.ok) return send(res, 400, { error: v.error });
-        const s = await store.create(Object.assign({}, v.value, { hat: v.value.hat || hatFor(v.value.name) }));
+        const pin = pinFrom(body);
+        if (pin && !PIN_RE.test(pin)) return send(res, 400, { error: 'Your PIN needs 4 to 8 digits.' });
+        const s = await store.create(Object.assign({}, v.value, { hat: v.value.hat || hatFor(v.value.name) }, pin ? { pinHash: await hashPin(pin) } : {}));
         return send(res, 201, { skier: publicView(s), editToken: s.editToken });
       }
+    }
+
+    // Find my entry from any device: name + PIN gives back the same edit token the sign-up returned.
+    if (parts[1] === 'skiers' && parts[2] === 'find' && parts.length === 3 && m === 'POST') {
+      if (findLimited(ip)) return send(res, 429, { error: 'Easy there. Try again in a few minutes.' });
+      let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
+      const noMatch = () => send(res, 403, { error: 'That name and PIN do not match.' });
+      const name = normName(body.name), pin = pinFrom(body);
+      if (!name || !PIN_RE.test(pin)) return noMatch();
+      const now = Date.now();
+      const named = (await store.list()).filter((s) => !s.hidden && s.pinHash && normName(s.name) === name);
+      if (!named.length) return noMatch();
+      const open = named.filter((s) => !(s.pinLockUntil && Date.parse(s.pinLockUntil) > now));
+      if (!open.length) return send(res, 429, { error: 'Too many tries. Try again in 15 minutes.' });
+      for (const s of open) {
+        if (!(await checkPin(pin, s.pinHash))) continue;
+        if (s.pinFails || s.pinLockUntil) await store.update(s.id, { pinFails: 0, pinLockUntil: '' });
+        return send(res, 200, { id: s.id, editToken: s.editToken });
+      }
+      // wrong PIN: count it against every entry with that name, lock one that has run out of tries
+      for (const s of open) {
+        const fails = (s.pinFails || 0) + 1;
+        await store.update(s.id, fails >= MAX_TRIES ? { pinFails: 0, pinLockUntil: new Date(now + LOCK_MS).toISOString() } : { pinFails: fails });
+      }
+      return noMatch();
     }
 
     if (parts[1] === 'skiers' && parts.length === 3 && m === 'PUT') {
@@ -108,7 +146,9 @@ function createHandler(opts = {}) {
       let body; try { body = await readJson(req); } catch (e) { return send(res, 400, { error: 'Bad request.' }); }
       const v = validateSkier(body);
       if (!v.ok) return send(res, 400, { error: v.error });
-      const u = await store.update(s.id, Object.assign({}, v.value, { hat: v.value.hat || hatFor(v.value.name) }));
+      const pin = pinFrom(body);
+      if (pin && !PIN_RE.test(pin)) return send(res, 400, { error: 'Your PIN needs 4 to 8 digits.' });
+      const u = await store.update(s.id, Object.assign({}, v.value, { hat: v.value.hat || hatFor(v.value.name) }, pin ? { pinHash: await hashPin(pin), pinFails: 0, pinLockUntil: '' } : {}));
       return send(res, 200, { skier: publicView(u) });
     }
 
