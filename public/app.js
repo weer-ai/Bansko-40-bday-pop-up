@@ -518,7 +518,8 @@
 
   function api(method, url, body, headers) {
     return fetch(url, { method: method, headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}), body: body ? JSON.stringify(body) : undefined })
-      .then((r) => r.json().catch(() => ({})).then((j) => { if (!r.ok) throw new Error(j.error || 'Something went wrong.'); return j; }));
+      .then((r) => r.json().catch(() => ({})).then((j) => { if (!r.ok) throw new Error(j.error || 'Something went wrong (error ' + r.status + ').'); return j; }),
+        () => { throw new Error('Could not reach the server. Check your connection and try again.'); });
   }
   const loadList = () => api('GET', '/api/skiers').then((list) => { syncPeople(list.map(fromApi)); });
 
